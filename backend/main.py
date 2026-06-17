@@ -7,6 +7,10 @@ import json
 import os
 import tempfile
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables on startup
+load_dotenv()
 
 from db import get_db_connection, init_db
 import cache
@@ -16,6 +20,7 @@ import factcheck
 import trust_score
 import explain
 import image_forensics
+import trends
 
 from contextlib import asynccontextmanager
 
@@ -55,6 +60,7 @@ app.add_middleware(
 class AnalyzeRequest(BaseModel):
     text: str
     url: Optional[str] = None
+    deep_reasoning: Optional[bool] = False
 
 class FeedbackRequest(BaseModel):
     claim_id: int
@@ -83,6 +89,11 @@ def health():
     """Simple API health check endpoint."""
     return {"status": "ok"}
 
+@app.get("/trends")
+def get_trends():
+    """Retrieves current trending keywords from the network."""
+    return trends.get_trending_keywords()
+
 @app.post("/analyze")
 def analyze(payload: AnalyzeRequest):
     """
@@ -92,12 +103,19 @@ def analyze(payload: AnalyzeRequest):
     """
     text = payload.text
     url = payload.url
+    deep_reason = payload.deep_reasoning
     
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Text field cannot be empty.")
         
+    # Log keywords for trend tracking
+    try:
+        trends.log_claim_keywords(text)
+    except Exception as e:
+        logger.error(f"Failed to log claim keywords for trends: {e}")
+        
     # 1. Cache Check
-    cache_key = cache.get_cache_key(text)
+    cache_key = cache.get_cache_key(text + ("_deep" if deep_reason else "_std"))
     cached_val = cache.get(cache_key)
     if cached_val:
         try:
@@ -107,6 +125,53 @@ def analyze(payload: AnalyzeRequest):
             return cached_data
         except Exception as e:
             logger.warning(f"Error reading cache data: {e}")
+            
+    # Check for Deep Reasoning Mode
+    if deep_reason:
+        import reasoning
+        reason_res = reasoning.run_deep_reasoning_audit(text)
+        score = reason_res["trust_score"]
+        label = reason_res["label"]
+        explanation = reason_res["explanation"]
+        references = reason_res.get("references", [])
+        
+        # Record claim in SQLite database
+        claim_id = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO claims (claim_text, verdict, score, source) VALUES (?, ?, ?, ?)",
+                (text, label, score, url or "Deep Web Audit")
+            )
+            conn.commit()
+            claim_id = cursor.lastrowid
+            conn.close()
+        except Exception as e:
+            logger.error(f"Failed to save claim to database: {e}")
+            
+        response_data = {
+            "id": claim_id,
+            "trust_score": score,
+            "label": label,
+            "fake_probability": float(round(1.0 - (score / 100.0), 4)),
+            "explanation": explanation,
+            "factcheck_match": None,
+            "factcheck_api_status": "skipped",
+            "method": "deep-reasoning-web-search",
+            "language": "en",
+            "translation_applied": False,
+            "cached": False,
+            "references": references
+        }
+        
+        # Write to Cache
+        try:
+            cache.set(cache_key, json.dumps(response_data))
+        except Exception as e:
+            logger.error(f"Failed to cache result: {e}")
+            
+        return response_data
             
     # 2. Multilingual detection and translation
     trans_result = translate.translate_text(text)

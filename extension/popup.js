@@ -48,6 +48,12 @@ const feedbackStatus = document.getElementById('feedback-status');
 const historyList = document.getElementById('history-list');
 const btnRefreshHistory = document.getElementById('btn-refresh-history');
 
+// Trends & Deep Audit Elements
+const trendsContainer = document.getElementById('trends-container');
+const deepReasoningToggle = document.getElementById('deep-reasoning-toggle');
+const webReferences = document.getElementById('web-references');
+const refLinksList = document.getElementById('ref-links-list');
+
 // Settings Elements
 const btnToggleSettings = document.getElementById('btn-toggle-settings');
 const settingsDrawer = document.getElementById('settings-drawer');
@@ -174,7 +180,11 @@ analyzeForm.addEventListener('submit', async (e) => {
             const response = await fetch(`${backendUrl}/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, url: url || null })
+                body: JSON.stringify({ 
+                    text, 
+                    url: url || null,
+                    deep_reasoning: deepReasoningToggle ? deepReasoningToggle.checked : false
+                })
             });
 
             if (!response.ok) throw new Error('Text veracity audit request failed');
@@ -244,6 +254,23 @@ function displayResults(data) {
         refOriginBadge.textContent = `Origin: ${data.factcheck_match.origin === 'google-factcheck-api' ? 'Google Fact Check Tools API' : 'Local Seed Database'}`;
     } else {
         factcheckReference.style.display = 'none';
+    }
+
+    // 4.5. Web Search References
+    if (data.references && data.references.length > 0) {
+        webReferences.style.display = 'block';
+        refLinksList.innerHTML = '';
+        data.references.forEach(ref => {
+            const li = document.createElement('li');
+            li.className = 'ref-link-item';
+            li.innerHTML = `
+                <a href="${escapeHtml(ref.url)}" target="_blank">${escapeHtml(ref.title)} ↗</a>
+                <span>${escapeHtml(ref.snippet)}</span>
+            `;
+            refLinksList.appendChild(li);
+        });
+    } else {
+        webReferences.style.display = 'none';
     }
 
     // 5. Image forensics
@@ -359,6 +386,8 @@ async function loadHistory() {
         const dot = document.querySelector('.status-dot');
         dot.style.backgroundColor = '#10b981';
         dot.style.boxShadow = '0 0 8px #10b981';
+        // Refresh trends list
+        loadTrends();
     } catch (err) {
         console.warn('Backend server unreachable:', err);
         // Mark status dot red (offline)
@@ -367,6 +396,48 @@ async function loadHistory() {
         dot.style.boxShadow = '0 0 8px #ef4444';
         
         historyList.innerHTML = '<li class="history-placeholder">Server offline. Check Settings and try again.</li>';
+        
+        if (trendsContainer) {
+            trendsContainer.innerHTML = '<span class="trend-tag loading">Offline</span>';
+        }
+    }
+}
+
+async function loadTrends() {
+    if (!trendsContainer) return;
+    try {
+        const response = await fetch(`${backendUrl}/trends`);
+        if (!response.ok) throw new Error('Failed to load trends');
+        const data = await response.json();
+        
+        trendsContainer.innerHTML = '';
+        if (data.length === 0) {
+            trendsContainer.innerHTML = '<span class="trend-tag loading">No trends active</span>';
+            return;
+        }
+        
+        data.forEach(trend => {
+            const span = document.createElement('span');
+            span.className = 'trend-tag';
+            span.textContent = trend;
+            span.addEventListener('click', () => {
+                claimTextInput.value = trend;
+                claimUrlInput.value = '';
+                removeSelectedFile();
+                
+                // Toggle deep reasoning on since trends are social real-time queries
+                if (deepReasoningToggle) {
+                    deepReasoningToggle.checked = true;
+                }
+                
+                // Trigger form submission
+                analyzeForm.dispatchEvent(new Event('submit'));
+            });
+            trendsContainer.appendChild(span);
+        });
+    } catch (err) {
+        console.warn('Failed to load trends:', err);
+        trendsContainer.innerHTML = '<span class="trend-tag loading">Offline</span>';
     }
 }
 
@@ -446,6 +517,7 @@ window.addEventListener('DOMContentLoaded', () => {
         inputBackendUrl.value = backendUrl;
         
         loadHistory();
+        loadTrends();
         
         // Check if selection auditing was requested via context menu
         if (settings.lastSelectedText) {

@@ -11,3 +11,4 @@ langdetect
 datasets
 scikit-learn
 accelerate
+beautifulsoup4

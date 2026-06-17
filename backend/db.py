@@ -45,6 +45,15 @@ def init_db():
     )
     """)
     
+    # Create search trends table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS search_trends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
     conn.commit()
     
     # Seed source reputation if empty

@@ -43,6 +43,17 @@
                         <button type="button" class="btn btn-demo" id="demo-workweek">Canada 4-Day Workweek</button>
                     </div>
 
+                    <!-- Trending Topics Bar -->
+                    <div class="trends-bar">
+                        <span class="trends-label">Trending Topics:</span>
+                        <div class="trends-container" id="trends-container">
+                            <!-- Populated dynamically -->
+                            <span class="trend-tag">Carrot Cure</span>
+                            <span class="trend-tag">Eiffel Tower</span>
+                            <span class="trend-tag">Workweek</span>
+                        </div>
+                    </div>
+
                     <form id="analyze-form">
                         <div class="form-group">
                             <label for="claim-text">Claim / Statement Text</label>
@@ -51,6 +62,15 @@
                         <div class="form-group">
                             <label for="claim-url">Source URL (Optional)</label>
                             <input type="url" id="claim-url" placeholder="https://example.com/source-article">
+                        </div>
+
+                        <!-- Deep Audit Switch -->
+                        <div class="form-group toggle-group">
+                            <label class="switch-container">
+                                <span class="toggle-text">Deep Web Audit (Reasoning Mode)</span>
+                                <input type="checkbox" id="deep-reasoning-toggle" class="toggle-input">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
 
                         <!-- Image Forensics Upload Area -->
@@ -117,6 +137,14 @@
                                     <a href="#" target="_blank" id="ref-source-link" class="link-primary">View Original Source</a>
                                 </div>
                                 <div class="ref-origin-badge" id="ref-origin-badge">Origin: Google FactCheck API</div>
+                            </div>
+
+                            <!-- Web Search References Card -->
+                            <div class="web-references" id="web-references" style="display: none;">
+                                <div class="ref-title">🌐 Web Verification Sources</div>
+                                <ul class="ref-links-list" id="ref-links-list">
+                                    <!-- Populated dynamically -->
+                                </ul>
                             </div>
 
                             <!-- Image ELA Results -->

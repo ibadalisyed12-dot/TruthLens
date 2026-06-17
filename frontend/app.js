@@ -21,6 +21,12 @@ const badgeMethod = document.getElementById('badge-method');
 const badgeLang = document.getElementById('badge-lang');
 const badgeApi = document.getElementById('badge-api');
 
+// Trends & Deep Audit Elements
+const trendsContainer = document.getElementById('trends-container');
+const deepReasoningToggle = document.getElementById('deep-reasoning-toggle');
+const webReferences = document.getElementById('web-references');
+const refLinksList = document.getElementById('ref-links-list');
+
 const factcheckReference = document.getElementById('factcheck-reference');
 const refSnippet = document.getElementById('ref-snippet');
 const refSourceName = document.getElementById('ref-source-name');
@@ -147,7 +153,11 @@ analyzeForm.addEventListener('submit', async (e) => {
             const response = await fetch(`${API_BASE_URL}/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, url: url || null })
+                body: JSON.stringify({ 
+                    text, 
+                    url: url || null,
+                    deep_reasoning: deepReasoningToggle ? deepReasoningToggle.checked : false
+                })
             });
 
             if (!response.ok) throw new Error('Veracity audit request failed');
@@ -220,6 +230,23 @@ function displayResults(data) {
         refOriginBadge.textContent = `Origin: ${data.factcheck_match.origin === 'google-factcheck-api' ? 'Google Fact Check Tools API' : 'Local Seed Database'}`;
     } else {
         factcheckReference.style.display = 'none';
+    }
+
+    // 4.5. Web Search References
+    if (data.references && data.references.length > 0) {
+        webReferences.style.display = 'block';
+        refLinksList.innerHTML = '';
+        data.references.forEach(ref => {
+            const li = document.createElement('li');
+            li.className = 'ref-link-item';
+            li.innerHTML = `
+                <a href="${escapeHtml(ref.url)}" target="_blank">${escapeHtml(ref.title)} ↗</a>
+                <span>${escapeHtml(ref.snippet)}</span>
+            `;
+            refLinksList.appendChild(li);
+        });
+    } else {
+        webReferences.style.display = 'none';
     }
 
     // 5. Image forensics
@@ -401,9 +428,49 @@ function formatTime(timestamp) {
 
 btnRefreshHistory.addEventListener('click', loadHistory);
 
+async function loadTrends() {
+    if (!trendsContainer) return;
+    try {
+        const response = await fetch(`${API_BASE_URL}/trends`);
+        if (!response.ok) throw new Error('Trends fetch failed');
+        const data = await response.json();
+        
+        trendsContainer.innerHTML = '';
+        if (data.length === 0) {
+            trendsContainer.innerHTML = '<span class="trend-tag loading">No trends active</span>';
+            return;
+        }
+        
+        data.forEach(trend => {
+            const span = document.createElement('span');
+            span.className = 'trend-tag';
+            span.textContent = trend;
+            span.addEventListener('click', () => {
+                claimTextInput.value = trend;
+                claimUrlInput.value = '';
+                removeSelectedFile();
+                
+                // Toggle deep reasoning on
+                if (deepReasoningToggle) {
+                    deepReasoningToggle.checked = true;
+                }
+                
+                // Trigger form submission
+                analyzeForm.dispatchEvent(new Event('submit'));
+            });
+            trendsContainer.appendChild(span);
+        });
+    } catch (err) {
+        console.warn('Failed to load trends:', err);
+        trendsContainer.innerHTML = '<span class="trend-tag loading">Offline</span>';
+    }
+}
+
 // Initial Load
 window.addEventListener('DOMContentLoaded', () => {
     loadHistory();
-    // Poll history every 30 seconds
+    loadTrends();
+    // Poll history and trends every 30 seconds
     setInterval(loadHistory, 30000);
+    setInterval(loadTrends, 30000);
 });
