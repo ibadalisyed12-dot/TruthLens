@@ -1,0 +1,121 @@
+# ==============================================================
+# TruthLens — .gitignore
+# Protects credentials, local environments, compiled files,
+# databases, and other files that must never be committed.
+# ==============================================================
+
+# ─── Environment & Credentials ────────────────────────────────
+# All .env files are secret by default.
+# ONLY .env.example is allowed (it contains placeholder values only).
+.env
+.env.*
+!.env.example
+
+# Google Cloud service-account credential files
+*service_account*.json
+*service-account*.json
+*credentials*.json
+*gcp_key*.json
+*google_key*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Virtual environments (common names)
+venv/
+.venv/
+env/
+.env_py/
+envs/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+# Type-checker / linting caches
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytype/
+
+# Pytest
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ─── Jupyter / iPython ────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Databases & Runtime Data ─────────────────────────────────
+# SQLite database files contain user data — not for version control
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Machine-Learning Model Weights ───────────────────────────
+# Large binary model files — use model registries instead
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.gguf
+*.onnx
+
+# But allow the small metrics JSON committed already
+!backend/model/metrics.json
+
+# ─── Node.js (if ever added) ──────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── IDE & Editor ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── OS Artefacts ─────────────────────────────────────────────
+desktop.ini
+ehthumbs.db
+
+# ─── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Temporary / Miscellaneous ────────────────────────────────
+tmp/
+temp/
+.tmp/
+*.tmp
+*.bak
+*.orig
+
+# ─── Git Bundle Backups (local only) ──────────────────────────
+*.bundle
